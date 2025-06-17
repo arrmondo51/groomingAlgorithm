@@ -1,0 +1,1 @@
+ g++ rG_finder.cpp -o rG_finder `root-config --cflags --libs` -I/Users/arrmondo/Documents/Code/REU/pythia8315/include `fastjet-config --cxxflags --libs` -lRecursiveTools -L/Users/arrmondo/Documents/Code/REU/pythia8315/lib -lpythia8 -Wl,-rpath,/Users/arrmondo/Documents/Code/REU/pythia8315/lib 
