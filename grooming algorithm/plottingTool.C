@@ -1,6 +1,7 @@
 #include <TFile.h>
 #include <TCanvas.h>
 #include <TH1D.h>
+#include <TH2D.h>
 #include <TString.h>
 #include <TLegend.h>
 #include <TF1.h>
@@ -15,7 +16,7 @@ void plottingTool(std::string fileName){
     
 
     
-
+    //quark vs gluon rG histograms
     for (int pT = 0; pT < 4; pT ++) {
         double meanRatio = 0;
         auto legend2 = new TLegend(.86,.8,.98,.94, "Quarks V Gluons", "brNDC");
@@ -82,6 +83,7 @@ void plottingTool(std::string fileName){
     c1->Clear();
 
 
+    //make quark vs gluon count charts
     for (int pT = 0; pT < 4; pT++) {
         TH1D *countH = (TH1D*)input->Get(Form("count_%d", pT));
         countH->SetLineColor(4);
@@ -90,14 +92,14 @@ void plottingTool(std::string fileName){
         countH->SetFillColor(2);
         countH->SetTitle(Form("Quark VS. Gluon Counts (pT range: %d - %d)", meow[pT], meow[pT+1]));
         countH->Draw();
-         c1->GetPad(0)->SetLogx(0);
+        c1->GetPad(0)->SetLogx(0);
         c1->Print(Form("doubleRefinedPlots/quark_v_gluon_counts-%d.pdf", pT));
 
     }
 
     c1->Clear();
 
-
+    //make rG plots
     for (int pT = 0; pT < 4; pT++) {
         TH1D *qH = (TH1D*)input->Get(Form("quark_rG_Histogram_%d", pT));
 
@@ -154,6 +156,36 @@ void plottingTool(std::string fileName){
             c1->Print(Form("doubleRefinedPlots/jet_girths_%d_%d.pdf", pT, z));
         }
     }
+
+    c1->Clear();
+
+    //last but not least, create the three jet vs jet 2D histograms of constituents
+
+    //(1)
+    TH2D *jetConstituents_OG = (TH2D*)input->Get("h_og");
+    //jetConstituents_OG->GetZaxis()->SetTitle("pT");
+    jetConstituents_OG->SetStats(false);
+    jetConstituents_OG->Draw("colz");
+    c1->GetPad(0)->SetLogx(0);
+    c1->Print("doubleRefinedPlots/xOGjet.pdf");
+
+    c1->Clear();
+
+    //(2)
+    TH2D *jetConstituents_z01 = (TH2D*)input->Get("h_z01");
+    //jetConstituents_z01->GetZaxis()->SetTitle("pT");
+    jetConstituents_z01->SetStats(false);
+    jetConstituents_z01->Draw("colz");
+    c1->Print("doubleRefinedPlots/xZ01jet.pdf");
+
+    c1->Clear();
+
+    //(3)
+    TH2D *jetConstituents_z03 = (TH2D*)input->Get("h_z03");
+    //jetConstituents_z03->GetZaxis()->SetTitle("pT");
+    jetConstituents_z03->SetStats(false);
+    jetConstituents_z03->Draw("colz");
+    c1->Print("doubleRefinedPlots/xZ03jet.pdf");
 
     input->Close();
 

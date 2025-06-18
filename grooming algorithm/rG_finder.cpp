@@ -11,6 +11,7 @@
 #include <TFile.h>
 #include <TH1D.h>
 #include <TString.h>
+#include <TH2D.h>
 
 using namespace Pythia8;
 using namespace fastjet;
@@ -82,6 +83,11 @@ int main()
     TH1D* gluon_rG_Histogram[4];
     TH1D* count_Histogram[4];
 
+    TH2D *h_og;
+    TH2D *h_z01; 
+    TH2D *h_z03;
+
+
 
     for (int pT = 0; pT < 4; ++pT) {
         for (int b = 0; b < 6; ++b) {
@@ -104,12 +110,13 @@ int main()
         count_Histogram[pT]->SetMinimum(0);
     }
 
-
+    bool create2DHistograms = false;
     
     for (int iEvt = 0; iEvt < nevents; iEvt++)
     {
         // Generate event
         if (!pythia.next()) continue;
+
         
         // Get particle info of final particles
         vector<PseudoJet> particles;
@@ -154,17 +161,101 @@ int main()
         }
 
 
-
         // Groom jets with SoftDrop and find rg
         Selector sel = SelectorCircle(.4);
+
         for (auto jet : truthJets){
-            for(int i = 0; i < 6; i++) {
-                for(int j = 0; j < 5; j++) {
+            
+            //fill three histograms
+            if(!create2DHistograms) {
+                PseudoJet groomed_01 = (*softdrops[0][0])(jet);
+                auto groomed_info_01 = groomed_01.structure_of<contrib::SoftDrop>();
+                double rG_01 = groomed_info_01.has_substructure () ? groomed_info_01.delta_R() : -1;
+
+                PseudoJet groomed_03 = (*softdrops[0][2])(jet);
+                auto groomed_info_03 = groomed_03.structure_of<contrib::SoftDrop>();
+                double rG_03 = groomed_info_03.has_substructure () ? groomed_info_03.delta_R() : -1;
+
+                if(rG_01 > 0 && rG_03 > 0 && rG_03 < (.5 * rG_01)) {
+                    double minEta_og = 1e9;
+                    double maxEta_og = -1e9;
+                    double minEta_z01 = 1e9;
+                    double maxEta_z01 = -1e9;
+                    double minEta_z03 = 1e9;
+                    double maxEta_z03 = -1e9;
+
+                    double minPhi_og = 1e9;
+                    double maxPhi_og = -1e9;
+                    double minPhi_z01 = 1e9;
+                    double maxPhi_z01 = -1e9;
+                    double minPhi_z03 = 1e9;
+                    double maxPhi_z03 = -1e9;
+
+                    cout << "rG condition met!";
+                    create2DHistograms = true;
+
+                    for(auto &p : jet.constituents()) {
+                        if(p.eta() < minEta_og) minEta_og = p.eta();
+                        if(p.eta() > maxEta_og) maxEta_og = p.eta();
+
+                        if(p.phi() < minPhi_og) minPhi_og = p.phi();
+                        if(p.phi() > maxPhi_og) maxPhi_og = p.phi();
+
+                        h_og = new TH2D("h_og", "Original Cluster;#eta;#phi", 25, minEta_og, maxEta_og, 25, minPhi_og, maxPhi_og);
+                        h_og->GetXaxis()->SetRangeUser(minEta_og, maxEta_og);
+                        h_og->GetYaxis()->SetRangeUser(minPhi_og, maxPhi_og);
+                    }
+                    for(auto& p : jet.constituents()) {
+                        h_og->Fill(p.eta(), p.phi(), jet.pt());
+                    }
+
+
+                    for(auto &p : groomed_info_01.constituents(groomed_01)) {
+                        if(p.eta() < minEta_z01) minEta_z01 = p.eta();
+                        if(p.eta() > maxEta_z01) maxEta_z01 = p.eta();
+
+                        if(p.phi() < minPhi_z01) minPhi_z01 = p.phi();
+                        if(p.phi() > maxPhi_z01) maxPhi_z01 = p.phi();
+
+                        h_z01 = new TH2D("h_z01", "Z-Cut: .1;#eta;#phi", 25, minEta_z01, maxEta_z01, 25, minPhi_z01, maxPhi_z01);
+                        h_z01->GetXaxis()->SetRangeUser(minEta_z01, maxEta_z01);
+                        h_z01->GetYaxis()->SetRangeUser(minPhi_z01, maxPhi_z01);
+                    }
+                    for(auto &p : groomed_info_01.constituents(groomed_01)) {
+                        h_z01->Fill(p.eta(), p.phi(), p.pt());
+                    }
+
+                    for(auto &p : groomed_info_03.constituents(groomed_03)) {
+                        if(p.eta() < minEta_z03) minEta_z03 = p.eta();
+                        if(p.eta() > maxEta_z03) maxEta_z03 = p.eta();
+
+                        if(p.phi() < minPhi_z03) minPhi_z03 = p.phi();
+                        if(p.phi() > maxPhi_z03) maxPhi_z03 = p.phi();
+
+                        h_z03 = new TH2D("h_z03", "Z-Cut: .3;#eta;#phi", 25, minEta_z03, maxEta_z03, 25, minPhi_z03, maxPhi_z03);
+                        h_z03->GetXaxis()->SetRangeUser(minEta_z03, maxEta_z03);
+                        h_z03->GetYaxis()->SetRangeUser(minPhi_z03, maxPhi_z03);
+                    }
+                    for(auto &p : groomed_info_03.constituents(groomed_03)) {
+                        h_z03->Fill(p.eta(), p.phi(), p.pt());
+                    }
+
+                }
+            }
+
+
+
+
+
+
+
+            for(int i = 0; i < 6; i++) {        //beta values
+                for(int j = 0; j < 5; j++) {    //zcut values
                     PseudoJet groomed_jet = (*softdrops[i][j])(jet);
                     auto groomed_info = groomed_jet.structure_of<contrib::SoftDrop>();
                     double rg = groomed_info.delta_R(); // delta R of the last iteration (definition of rg)
                     bool failed = !groomed_info.has_substructure(); // Never passed the soft drop condition
-
+            
                     if(!failed){
                         if (jet.pt() >= pT_ranges[0].first && jet.pt() < pT_ranges[0].second) {
                                     rG_Histogram[0][i][j]->Fill(rg);
@@ -248,6 +339,7 @@ int main()
                             
                         }
 
+
                     }
 
 
@@ -304,6 +396,11 @@ int main()
         count_Histogram[pT]->Write();
 
     }
+
+
+    h_og->Write();
+    h_z01->Write();
+    h_z03->Write();
 
 
 
